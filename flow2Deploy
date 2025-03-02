@@ -1,0 +1,44 @@
+# Get the path to the extracted package contents
+$packagePath = $OctopusParameters["Octopus.Action.Package.InstallationDirectoryPath"]
+
+$patteren = "*.yxzp"
+# Specify the file you want to reference
+$files = Get-childItem -Path $packagePath -Filter $patteren
+
+foreach ($file in $files) {
+
+Write-Host "Processing file: $($file.FullName)"
+
+#$AlteryxServerUrl = $OctopusParameters['ServerUrl']
+$apiKey = $OctopusParameters['apiKEY']
+$apiSecret = $OctopusParameters['apiSECRET']
+$apiTokenAddress = $OctopusParameters['apiTokenADDRESS']
+$webAPIWorkflow = $OctopusParameters['webAPIWorkFlows'] 
+$owner_ID = $OctopusParameters['ownerID']
+
+# Create a published workflow name
+$workflowName = [System.IO.Path]::GetFileNameWithoutExtension($file)
+
+$filePath ="$packagePath\$file"
+$fileName = $workflowName
+
+# Check if the file exists
+if (Test-Path $filePath) {
+    Write-Host "File found: $filePath"
+    Write-Host "ApiTokenAddress: $apiTokenAddress"
+    $accessToken=curl.exe --ssl-no-revoke -d "client_id=$apiKey&client_secret=$apiSecret&grant_type=client_credentials" $apiTokenAddress
+    Write-Host "access token call completed"
+$json = $accessToken
+$data = $json | ConvertFrom-Json
+$accessToken = $data.access_token
+#$upload = 
+    Write-Host "File path: $filePath"
+    Write-Host "File name: $fileName"
+    $dataOutput = curl.exe --ssl-no-revoke -X POST --header 'Content-Type: multipart/form-data' --header 'Accept: application/json' --header "Authorization: Bearer $accessToken" -F file=@$filePath -F name=$fileName -F ownerId=$owner_ID -F isPublic=true -F isReadyForMigration=true -F othersMayDownload=true -F othersCanExecute=true -F executionMode=Standard -F workflowCredentialType=Default  $webAPIWorkflow
+Write-Host "Response : $dataOutput"
+    
+} else {
+    Write-Host "File not found: $filePath"
+    
+}
+}
